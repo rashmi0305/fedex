@@ -132,7 +132,7 @@ def fit_packages_to_uld(uld_df, package_df):
 # Fit the packages to the ULDs and get positions
 allocations_result = fit_packages_to_uld(uld_df, package_df)
 
-# Output the allocations, positions, and corners (left-up and right-bottom)
+
 print("Package Allocations to ULDs, Positions, and Corners:")
 for result in allocations_result:
     package_id, uld_id, (x0, y0, z0), (x1, y1, z1) = result
