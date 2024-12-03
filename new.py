@@ -6,7 +6,7 @@ uld_data = [
     ("U3", 244, 318, 244, 2800),
     ("U4", 244, 318, 244, 2800),
     ("U5", 244, 318, 285, 3500)
-    # ("U6", 244, 31, 28, 3500)
+    #  ("U6", 244, 31, 28, 3500)
 ]
 K=40 # delay for spreading priority packages into multiple ULDS
 
@@ -26,35 +26,35 @@ package_data = [
 ("P-12", 48, 80, 88, 27, False, 117),
 ("P-13", 55, 94, 87, 41, False, 73),
 ("P-14", 45, 46, 81, 27, False, 68),
-("P-15", 84, 49, 60, 57, True, None),
-("P-16", 48, 93, 63, 82, True, None),
-("P-17", 83, 63, 57, 29, True, None),
-("P-18", 68, 101, 95, 96, False, 65),
-("P-19", 51, 87, 69, 73, False, 107),
-("P-20", 88, 106, 56, 71, True, None),
-("P-21", 105, 71, 105, 223, False, 116),
-("P-22", 100, 92, 99, 191, False, 86),
-("P-23", 51, 50, 110, 59, True, None),
-("P-24", 81, 109, 55, 123, False, 69),
-("P-25", 44, 77, 53, 37, False, 108),
-("P-26", 69, 56, 73, 56, False, 130),
-("P-27", 93, 62, 49, 18, False, 122),
-("P-28", 81, 64, 95, 70, False, 139),
-("P-29", 62, 86, 53, 23, False, 122),
-("P-30", 88, 85, 102, 164, False, 70),
-("P-31", 71, 49, 76, 67, False, 76),
-("P-32", 70, 44, 98, 53, False, 124),
-("P-33", 90, 89, 73, 132, False, 136),
-("P-34", 87, 45, 81, 45, False, 77),
-("P-35", 83, 72, 63, 96, False, 103),
-("P-36", 86, 80, 78, 146, True, None),
-("P-37", 59, 76, 51, 33, False, 131),
-("P-38", 84, 96, 48, 21, False, 60),
-("P-39", 96, 64, 61, 61, False, 111),
-("P-40", 70, 45, 90, 78, False, 106),
-("P-41", 104, 90, 68, 72, True, None),
-("P-42", 62, 109, 41, 46, True, None),
-("P-43", 51, 86, 108, 87, False, 109)
+("P-15", 84, 49, 60, 57, True, None)
+# ("P-16", 48, 93, 63, 82, True, None),
+# ("P-17", 83, 63, 57, 29, True, None),
+# ("P-18", 68, 101, 95, 96, False, 65),
+# ("P-19", 51, 87, 69, 73, False, 107),
+# ("P-20", 88, 106, 56, 71, True, None),
+# ("P-21", 105, 71, 105, 223, False, 116),
+# ("P-22", 100, 92, 99, 191, False, 86),
+# ("P-23", 51, 50, 110, 59, True, None),
+# ("P-24", 81, 109, 55, 123, False, 69),
+# ("P-25", 44, 77, 53, 37, False, 108),
+# ("P-26", 69, 56, 73, 56, False, 130),
+# ("P-27", 93, 62, 49, 18, False, 122),
+# ("P-28", 81, 64, 95, 70, False, 139),
+# ("P-29", 62, 86, 53, 23, False, 122),
+# ("P-30", 88, 85, 102, 164, False, 70),
+# ("P-31", 71, 49, 76, 67, False, 76),
+# ("P-32", 70, 44, 98, 53, False, 124),
+# ("P-33", 90, 89, 73, 132, False, 136),
+# ("P-34", 87, 45, 81, 45, False, 77),
+# ("P-35", 83, 72, 63, 96, False, 103),
+# ("P-36", 86, 80, 78, 146, True, None),
+# ("P-37", 59, 76, 51, 33, False, 131),
+# ("P-38", 84, 96, 48, 21, False, 60),
+# ("P-39", 96, 64, 61, 61, False, 111),
+# ("P-40", 70, 45, 90, 78, False, 106),
+# ("P-41", 104, 90, 68, 72, True, None),
+# ("P-42", 62, 109, 41, 46, True, None),
+# ("P-43", 51, 86, 108, 87, False, 109)
 # ("P-44", 84, 40, 49, 28, False, 87),
 # ("P-45", 91, 72, 81, 92, True, None),
 # ("P-46", 71, 62, 94, 39, True, None),
@@ -139,8 +139,7 @@ def fit_packages_to_uld(uld_df, package_df):
 
     # Sort packages by size (volume), weight, and type for better packing
     package_df["Volume"] = package_df["Length"] * package_df["Width"] * package_df["Height"]
-    package_df = package_df.sort_values(by=["Type", "Volume", "Weight"], ascending=[False, False, False])
-
+    package_df = package_df.sort_values(by=["Type", "Weight", "Volume"], ascending=[False, False, False])
     allocations_result = []
 
     # Allocate packages
