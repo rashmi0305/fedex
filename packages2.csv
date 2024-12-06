@@ -1,0 +1,6 @@
+Package_ID,Length,Width,Height,Weight,Type,Cost_of_Delay
+P-15,84,49,60,57,Priority,-
+P-16,48,93,63,82,Priority,-
+P-17,83,63,57,29,Priority,-
+P-49,69,40,100,55,Priority,-
+P-50,73,104,64,75,Priority,-
