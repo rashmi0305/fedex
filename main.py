@@ -1,31 +1,20 @@
 import pandas as pd
-import math
+import csv
 
-# ULD data (from your input)
-uld_data = [
-    ("U1", 224, 318, 162, 2500),
-    ("U2", 224, 318, 162, 2500),
-    ("U3", 244, 318, 244, 2800),
-    ("U4", 244, 318, 244, 2800),
-    ("U5", 244, 318, 285, 3500),
-    ("U6", 244, 318, 285, 3500)
-]
-K=40 # delay for spreading priority packages into multiple ULDS
-
-# Package data (from your input)
-package_data = [
-    ("P-1", 50, 50, 50, 20, False, 100),
-    ("P-2", 70, 60, 60, 30, True, None),
-    ("P-3", 100, 100, 15, 50, False, 200),
-     ("P-6", 20, 20, 20, 10, True, None),
-    ("P-4", 30, 30, 30, 10, True, None),
-    ("P-5", 80, 80, 80, 90, True, None)
-]
-
-# Convert to DataFrames
-uld_df = pd.DataFrame(uld_data, columns=["ULD_ID", "Length", "Width", "Height", "Weight_Limit"])
-package_df = pd.DataFrame(package_data, columns=["Package_ID", "Length", "Width", "Height", "Weight", "Type", "Cost_of_Delay"])
-
+# Function to load data
+def load_data():
+    try:
+        uld_df = pd.read_csv("C:\\Users\\rashm\\OneDrive\\Documents\\Fedex\\fedex\\uld.csv")
+        package_df = pd.read_csv("C:\\Users\\rashm\\OneDrive\\Documents\\Fedex\\fedex\\packages.csv")
+        config_df = pd.read_csv("C:\\Users\\rashm\\OneDrive\\Documents\\Fedex\\fedex\\config.csv")
+        
+        # Load K value from the config file
+        K = config_df.loc[0, "K"]
+        
+        return uld_df, package_df, K
+    except FileNotFoundError as e:
+        print(f"Error: {e}")
+        return None, None, None
 
 # Function to rotate package dimensions
 def rotate_package(package):
@@ -38,101 +27,12 @@ def rotate_package(package):
         (package["Height"], package["Length"], package["Width"]),
         (package["Height"], package["Width"], package["Length"])
     ]
-    # Return all rotations
     return rotations
 
-# Algorithm to allocate packages to ULDs using dynamic packing, greedy heuristic, and rotation
-# def fit_packages_to_uld(uld_df, package_df):
-    # allocations = {uld: [] for uld in uld_df["ULD_ID"]}  # Initialize allocations dictionary
-    # positions = {uld: [] for uld in uld_df["ULD_ID"]}  # Store positions of packages in ULD
-    # occupied_positions = {uld: [] for uld in uld_df["ULD_ID"]}  # Track occupied positions for overlap detection
-    # remaining_space = {
-    #     uld: {
-    #         "Length": uld_df.loc[uld_df["ULD_ID"] == uld, "Length"].values[0],
-    #         "Width": uld_df.loc[uld_df["ULD_ID"] == uld, "Width"].values[0],
-    #         "Height": uld_df.loc[uld_df["ULD_ID"] == uld, "Height"].values[0],
-    #         "Volume": uld_df.loc[uld_df["ULD_ID"] == uld, "Length"].values[0] *
-    #                  uld_df.loc[uld_df["ULD_ID"] == uld, "Width"].values[0] *
-    #                  uld_df.loc[uld_df["ULD_ID"] == uld, "Height"].values[0], 
-    #         "Weight": uld_df.loc[uld_df["ULD_ID"] == uld, "Weight_Limit"].values[0]
-    #     }
-    #     for uld in uld_df["ULD_ID"]
-    # }
-
-    # # Sort packages using weight-to-volume ratio and then by size
-    # package_df["Weight_to_Volume_Ratio"] = package_df["Weight"] / (package_df["Length"] * package_df["Width"] * package_df["Height"])
-    # package_df = package_df.sort_values(by=["Type", "Weight_to_Volume_Ratio", "Weight", "Length", "Width", "Height"], ascending=[False, False, False, False, False, False])
-
-    # allocations_result = []
-    
-    # # Allocate packages
-    # for _, package in package_df.iterrows():
-    #     package_volume = package["Length"] * package["Width"] * package["Height"]
-    #     package_weight = package["Weight"]
-    #     package_rotations = rotate_package(package)
-
-    #     allocated = False
-    #     for uld in sorted(allocations, key=lambda uld: (remaining_space[uld]["Volume"], remaining_space[uld]["Weight"]), reverse=True):
-    #         uld_remaining = remaining_space[uld]
-
-    #         # Check if package fits within ULD's remaining space and weight limit
-    #         if uld_remaining["Volume"] >= package_volume and uld_remaining["Weight"] >= package_weight:
-    #             # Try to fit package into the ULD with rotation possibilities
-    #             placed = False
-    #             for rotation in package_rotations:
-    #                 p_length, p_width, p_height = rotation
-                    
-    #                 # Try different positions in the ULD (more adaptive packing)
-    #                 for x in range(0, uld_remaining["Length"] - p_length + 1):
-    #                     for y in range(0, uld_remaining["Width"] - p_width + 1):
-    #                         for z in range(0, uld_remaining["Height"] - p_height + 1):
-    #                             # Check if the package fits at this (x, y, z) position
-    #                             if (x + p_length <= uld_remaining["Length"] and 
-    #                                 y + p_width <= uld_remaining["Width"] and
-    #                                 z + p_height <= uld_remaining["Height"]):
-                                    
-    #                                 # Check for overlap with other packages already placed
-    #                                 overlap = False
-    #                                 for pos, dims in occupied_positions[uld]:
-    #                                     if (x < pos[0] + dims[0] and x + p_length > pos[0] and
-    #                                         y < pos[1] + dims[1] and y + p_width > pos[1] and
-    #                                         z < pos[2] + dims[2] and z + p_height > pos[2]):
-    #                                         overlap = True
-    #                                         break
-                                    
-    #                                 if not overlap:
-    #                                     # No overlap, so place the package here
-    #                                     allocations[uld].append(package["Package_ID"])
-    #                                     remaining_space[uld]["Volume"] -= package_volume
-    #                                     remaining_space[uld]["Weight"] -= package_weight
-    #                                     positions[uld].append((package["Package_ID"], (x, y, z)))
-                                        
-    #                                     # Update occupied positions
-    #                                     occupied_positions[uld].append(((x, y, z), (p_length, p_width, p_height)))
-                                        
-    #                                     # Record the result with corners
-    #                                     x1, y1, z1 = x + p_length, y + p_width, z + p_height
-    #                                     allocations_result.append((package["Package_ID"], uld, (x, y, z), (x1, y1, z1)))
-    #                                     placed = True
-    #                                     allocated = True
-    #                                     break
-    #                         if placed:
-    #                             break
-    #                     if placed:
-    #                         break
-    #                 if placed:
-    #                     break
-    #             if allocated:
-    #                 break  # Move to the next package once allocated
-        
-    #     # If not allocated, add it to the result with ULD ID as None
-    #     if not allocated:
-    #         allocations_result.append((package["Package_ID"], None, None, None))
-
-    # return allocations_result
+# Greedy Algorithm to allocate packages to ULDs using rotation and overlap checking
+# Greedy Algorithm to allocate packages to ULDs using rotation and overlap checking
 def fit_packages_to_uld(uld_df, package_df):
     allocations = {uld: [] for uld in uld_df["ULD_ID"]}  # Initialize allocations dictionary
-    positions = {uld: [] for uld in uld_df["ULD_ID"]}  # Store positions of packages in ULD
     occupied_positions = {uld: [] for uld in uld_df["ULD_ID"]}  # Track occupied positions for overlap detection
     remaining_space = {
         uld: {
@@ -141,47 +41,41 @@ def fit_packages_to_uld(uld_df, package_df):
             "Height": uld_df.loc[uld_df["ULD_ID"] == uld, "Height"].values[0],
             "Volume": uld_df.loc[uld_df["ULD_ID"] == uld, "Length"].values[0] *
                      uld_df.loc[uld_df["ULD_ID"] == uld, "Width"].values[0] *
-                     uld_df.loc[uld_df["ULD_ID"] == uld, "Height"].values[0], 
+                     uld_df.loc[uld_df["ULD_ID"] == uld, "Height"].values[0],
             "Weight": uld_df.loc[uld_df["ULD_ID"] == uld, "Weight_Limit"].values[0]
         }
         for uld in uld_df["ULD_ID"]
     }
 
-    # Sort packages using weight-to-volume ratio and then by size
-    package_df["Weight_to_Volume_Ratio"] = package_df["Weight"] / (package_df["Length"] * package_df["Width"] * package_df["Height"])
-    package_df = package_df.sort_values(by=["Type", "Weight_to_Volume_Ratio", "Weight", "Length", "Width", "Height"], ascending=[False, False, False, False, False, False])
-
-    allocations_result = []
+    # Sort packages by type (priority first), then by weight and volume for better packing
+    package_df["Volume"] = package_df["Length"] * package_df["Width"] * package_df["Height"]
+    package_df = package_df.sort_values(by=["Type", "Weight", "Volume"], ascending=[False, False, True])
     
+    allocations_result = []
+
     # Allocate packages
     for _, package in package_df.iterrows():
-        package_volume = package["Length"] * package["Width"] * package["Height"]
+        package_volume = package["Volume"]
         package_weight = package["Weight"]
         package_rotations = rotate_package(package)
 
-        allocated = False
-        best_leftover_space = float('inf')
-        best_rotation = None
-        best_position = None
-        best_uld = None
-        
-        # Try to allocate the package
-        for uld in sorted(allocations, key=lambda uld: (remaining_space[uld]["Volume"], remaining_space[uld]["Weight"]), reverse=True):
+        allocated = False  # Track if package is allocated
+        for uld in allocations.keys():  # Iterate through ULDs in order
             uld_remaining = remaining_space[uld]
 
             # Check if package fits within ULD's remaining space and weight limit
             if uld_remaining["Volume"] >= package_volume and uld_remaining["Weight"] >= package_weight:
                 for rotation in package_rotations:
                     p_length, p_width, p_height = rotation
-                    
-                    # Track best fitting rotation and position
+
+                    # Check position in ULD
                     for x in range(0, uld_remaining["Length"] - p_length + 1):
                         for y in range(0, uld_remaining["Width"] - p_width + 1):
                             for z in range(0, uld_remaining["Height"] - p_height + 1):
-                                if (x + p_length <= uld_remaining["Length"] and 
+                                if (x + p_length <= uld_remaining["Length"] and
                                     y + p_width <= uld_remaining["Width"] and
                                     z + p_height <= uld_remaining["Height"]):
-                                    
+
                                     # Check for overlap with other packages
                                     overlap = False
                                     for pos, dims in occupied_positions[uld]:
@@ -190,60 +84,122 @@ def fit_packages_to_uld(uld_df, package_df):
                                             z < pos[2] + dims[2] and z + p_height > pos[2]):
                                             overlap = True
                                             break
-                                    
-                                    if not overlap:
-                                        # Calculate the leftover space in the ULD after placing the package
-                                        leftover_space = (uld_remaining["Volume"] - package_volume)
-                                        if leftover_space < best_leftover_space:
-                                            best_leftover_space = leftover_space
-                                            best_rotation = rotation
-                                            best_position = (x, y, z)
-                                            best_uld = uld
-                                        break
 
-            if best_uld is not None:  # If a suitable position is found, break early
-                break
-        
-        # Place the package if a valid position is found
-        if best_uld is not None:
-            allocations[best_uld].append(package["Package_ID"])
-            remaining_space[best_uld]["Volume"] -= package_volume
-            remaining_space[best_uld]["Weight"] -= package_weight
-            positions[best_uld].append((package["Package_ID"], best_position))
-            
-            # Update occupied positions
-            x, y, z = best_position
-            p_length, p_width, p_height = best_rotation
-            occupied_positions[best_uld].append(((x, y, z), (p_length, p_width, p_height)))
-            
-            # Record the result with corners
-            x1, y1, z1 = x + p_length, y + p_width, z + p_height
-            allocations_result.append((package["Package_ID"], best_uld, (x, y, z), (x1, y1, z1)))
-            allocated = True
-        
+                                    if not overlap:
+                                        # Allocate the package
+                                        remaining_space[uld]["Volume"] -= package_volume
+                                        remaining_space[uld]["Weight"] -= package_weight
+                                        occupied_positions[uld].append(((x, y, z), rotation))
+                                        allocations[uld].append(package["Package_ID"])
+                                        allocations_result.append((package["Package_ID"], uld, (x, y, z), 
+                                                                   (x + p_length, y + p_width, z + p_height)))
+                                        allocated = True
+                                        break  # Stop once allocated
+                            if allocated:
+                                break  # Stop Y-loop
+                        if allocated:
+                            break  # Stop X-loop
+                    if allocated:
+                        break  # Stop Rotation-loop
+            if allocated:
+                break  # Stop ULD-loop
+
+        # If not allocated, record package with ULD as None
         if not allocated:
-            allocations_result.append((package["Package_ID"], None, None, None))  # If not allocated, add to result
+            allocations_result.append((package["Package_ID"], None, (-1, -1, -1), (-1, -1, -1)))
 
     return allocations_result
 
 
-# Fit the packages to the ULDs and get positions
-allocations_result = fit_packages_to_uld(uld_df, package_df)
+# Overlap checking
+def is_overlapping(pkg1, pkg2):
+    (x0_1, y0_1, z0_1), (x1_1, y1_1, z1_1) = pkg1
+    (x0_2, y0_2, z0_2), (x1_2, y1_2, z1_2) = pkg2
+    
+    overlap_x = not (x1_1 <= x0_2 or x1_2 <= x0_1)
+    overlap_y = not (y1_1 <= y0_2 or y1_2 <= y0_1)
+    overlap_z = not (z1_1 <= z0_2 or z1_2 <= z0_1)
+    
+    return overlap_x and overlap_y and overlap_z
 
-priority_package_ids = package_df[package_df['Type'] == True]['Package_ID'].tolist()
+def check_for_overlaps(allocations_result):
+    uld_allocations = {}
 
-# Check how many ULDs have priority packages
-priority_uld_count = len(set([uld for package_id, uld, _, _ in allocations_result if package_id in priority_package_ids and uld is not None]))
+    # Group packages by ULD
+    for package_id, uld_id, (x0, y0, z0), (x1, y1, z1) in allocations_result:
+        if uld_id not in uld_allocations:
+            uld_allocations[uld_id] = []
+        uld_allocations[uld_id].append(((x0, y0, z0), (x1, y1, z1)))
 
-# Output the result
-print(f"Number of ULDs with priority packages: {priority_uld_count}")
-print(f"Cost Delay: {K*priority_uld_count}")
+    # Check for overlaps within each ULD
+    overlaps = []
+    for uld_id, packages in uld_allocations.items():
+        for i in range(len(packages)):
+            for j in range(i + 1, len(packages)):
+                if is_overlapping(packages[i], packages[j]):
+                    overlaps.append((uld_id, i, j))
 
-print("Package Allocations to ULDs, Positions, and Corners:")
-for result in allocations_result:
-    package_id, uld_id, (x0, y0, z0), (x1, y1, z1) = result
-    if uld_id is None:
-        print(f"Package {package_id} could not be allocated to any ULD.")
+    return overlaps
+
+# Save results to CSV files
+# Save results to CSV files
+def save_results(allocations_result, K, priority_package_ids):
+    # Convert Position_Start and Position_End into clean strings (without extra quotes)
+    for i in range(len(allocations_result)):
+        allocations_result[i] = (
+            allocations_result[i][0],  # Package_ID
+            allocations_result[i][1],  # ULD_ID
+            f"({allocations_result[i][2][0]}, {allocations_result[i][2][1]}, {allocations_result[i][2][2]})",  # Position_Start
+            f"({allocations_result[i][3][0]}, {allocations_result[i][3][1]}, {allocations_result[i][3][2]})"   # Position_End
+        )
+
+    # Create the allocations DataFrame
+    allocations_df = pd.DataFrame(allocations_result, columns=["Package_ID", "ULD_ID", "Position_Start", "Position_End"])
+
+    # Save the allocations DataFrame to CSV with proper quoting for tuple columns
+    allocations_df.to_csv("allocations_result.csv", quoting=csv.QUOTE_MINIMAL)
+
+    # Calculate priority package statistics
+    priority_uld_count = len(set([uld for package_id, uld, _, _ in allocations_result if package_id in priority_package_ids and uld is not None]))
+    cost_delay = K * priority_uld_count
+
+    # Create a summary DataFrame for priority package statistics
+    summary_data = [
+        ["Number of ULDs with priority packages", priority_uld_count],
+        ["Cost-Delay", cost_delay]
+    ]
+    summary_df = pd.DataFrame(summary_data, columns=["Metric", "Value"])
+
+    # Save the summary DataFrame to CSV
+    summary_df.to_csv("priority_package_summary.csv", index=False)
+
+    print(f"Results saved to 'allocations_result.csv'.")
+    print(f"Summary saved to 'priority_package_summary.csv'.")
+
+# Main function to run the program
+def main():
+    uld_df, package_df, K = load_data()
+    
+    # If data is missing, return early
+    if uld_df is None or package_df is None or K is None:
+        print("Data loading failed. Exiting.")
+        return
+    
+    # Perform the allocation
+    allocations_result = fit_packages_to_uld(uld_df, package_df)
+    
+    # Get the list of priority package IDs
+    priority_package_ids = package_df[package_df['Type'] == "priority"]['Package_ID'].tolist()
+    
+    # Check for overlaps in the allocations
+    overlaps = check_for_overlaps(allocations_result)
+    if overlaps:
+        print(f"Overlaps found: {overlaps}")
     else:
-        print(f"Package {package_id} allocated to ULD {uld_id} at position (x0, y0, z0) = ({x0}, {y0}, {z0}), "
-              f"diagonally opposite corner (x1, y1, z1) = ({x1}, {y1}, {z1})")
+        print("No overlaps detected.")
+    
+    # Save the results
+    save_results(allocations_result, K, priority_package_ids)
+
+if __name__ == "__main__":
+    main()
