@@ -5,12 +5,12 @@ import csv
 def load_data():
     try:
         uld_df = pd.read_csv("C:\\Users\\rashm\\OneDrive\\Documents\\Fedex\\fedex\\uld.csv")
-        package_df = pd.read_csv("C:\\Users\\rashm\\OneDrive\\Documents\\Fedex\\fedex\\packages.csv")
+        package_df = pd.read_csv("C:\\Users\\rashm\\OneDrive\\Documents\\Fedex\\fedex\\packages1.csv")
         config_df = pd.read_csv("C:\\Users\\rashm\\OneDrive\\Documents\\Fedex\\fedex\\config.csv")
-        
+
         # Load K value from the config file
         K = config_df.loc[0, "K"]
-        
+
         return uld_df, package_df, K
     except FileNotFoundError as e:
         print(f"Error: {e}")
@@ -29,7 +29,6 @@ def rotate_package(package):
     ]
     return rotations
 
-# Greedy Algorithm to allocate packages to ULDs using rotation and overlap checking
 # Greedy Algorithm to allocate packages to ULDs using rotation and overlap checking
 def fit_packages_to_uld(uld_df, package_df):
     allocations = {uld: [] for uld in uld_df["ULD_ID"]}  # Initialize allocations dictionary
@@ -50,8 +49,10 @@ def fit_packages_to_uld(uld_df, package_df):
     # Sort packages by type (priority first), then by weight and volume for better packing
     package_df["Volume"] = package_df["Length"] * package_df["Width"] * package_df["Height"]
     package_df = package_df.sort_values(by=["Type", "Weight", "Volume"], ascending=[False, False, True])
-    
+
     allocations_result = []
+    total_cost_delay = 0  # Variable to track cost delay for unallocated packages
+    placed = 0  # Count how many priority packages are successfully allocated
 
     # Allocate packages
     for _, package in package_df.iterrows():
@@ -94,6 +95,10 @@ def fit_packages_to_uld(uld_df, package_df):
                                         allocations_result.append((package["Package_ID"], uld, (x, y, z), 
                                                                    (x + p_length, y + p_width, z + p_height)))
                                         allocated = True
+
+                                        
+                                        placed+= 1
+
                                         break  # Stop once allocated
                             if allocated:
                                 break  # Stop Y-loop
@@ -104,102 +109,57 @@ def fit_packages_to_uld(uld_df, package_df):
             if allocated:
                 break  # Stop ULD-loop
 
-        # If not allocated, record package with ULD as None
+        # If not allocated, record package with ULD as None and add cost delay
         if not allocated:
+            total_cost_delay += package["Cost_of_Delay"]
             allocations_result.append((package["Package_ID"], None, (-1, -1, -1), (-1, -1, -1)))
 
-    return allocations_result
+    return allocations_result, total_cost_delay, placed
 
-
-# Overlap checking
-def is_overlapping(pkg1, pkg2):
-    (x0_1, y0_1, z0_1), (x1_1, y1_1, z1_1) = pkg1
-    (x0_2, y0_2, z0_2), (x1_2, y1_2, z1_2) = pkg2
-    
-    overlap_x = not (x1_1 <= x0_2 or x1_2 <= x0_1)
-    overlap_y = not (y1_1 <= y0_2 or y1_2 <= y0_1)
-    overlap_z = not (z1_1 <= z0_2 or z1_2 <= z0_1)
-    
-    return overlap_x and overlap_y and overlap_z
-
-def check_for_overlaps(allocations_result):
-    uld_allocations = {}
-
-    # Group packages by ULD
-    for package_id, uld_id, (x0, y0, z0), (x1, y1, z1) in allocations_result:
-        if uld_id not in uld_allocations:
-            uld_allocations[uld_id] = []
-        uld_allocations[uld_id].append(((x0, y0, z0), (x1, y1, z1)))
-
-    # Check for overlaps within each ULD
-    overlaps = []
-    for uld_id, packages in uld_allocations.items():
-        for i in range(len(packages)):
-            for j in range(i + 1, len(packages)):
-                if is_overlapping(packages[i], packages[j]):
-                    overlaps.append((uld_id, i, j))
-
-    return overlaps
 
 # Save results to CSV files
-# Save results to CSV files
-def save_results(allocations_result, K, priority_package_ids):
-    # Convert Position_Start and Position_End into clean strings (without extra quotes)
-    for i in range(len(allocations_result)):
-        allocations_result[i] = (
-            allocations_result[i][0],  # Package_ID
-            allocations_result[i][1],  # ULD_ID
-            f"({allocations_result[i][2][0]}, {allocations_result[i][2][1]}, {allocations_result[i][2][2]})",  # Position_Start
-            f"({allocations_result[i][3][0]}, {allocations_result[i][3][1]}, {allocations_result[i][3][2]})"   # Position_End
-        )
+def save_results(allocations_result, K, cost, placed,priority_allocated_count):
+    # Open CSV for writing
+    with open("allocations.csv", mode="w", newline='') as file:
+        writer = csv.writer(file, quoting=csv.QUOTE_MINIMAL)
+        
+        # Write the first row with cost and priority_allocated_count
+        writer.writerow([ K + cost, placed,priority_allocated_count])
+        
+        # Write the allocation rows with the new format
+        for allocation in allocations_result:
+            package_id = allocation[0]
+            uld_id = allocation[1]
+            # Unpack start and end coordinates directly into integers
+            if allocation[1] is not None:
+                x_start, y_start, z_start = allocation[2]
+                x_end, y_end, z_end = allocation[3]
+            else:
+                x_start, y_start, z_start = 0, 0, 0
+                x_end, y_end, z_end = 0, 0, 0
 
-    # Create the allocations DataFrame
-    allocations_df = pd.DataFrame(allocations_result, columns=["Package_ID", "ULD_ID", "Position_Start", "Position_End"])
+            # Write in the required format
+            writer.writerow([package_id, uld_id, x_start, y_start, z_start, x_end, y_end, z_end])
 
-    # Save the allocations DataFrame to CSV with proper quoting for tuple columns
-    allocations_df.to_csv("allocations_result.csv", quoting=csv.QUOTE_MINIMAL)
+    print(f"Results saved to 'allocations.csv'.")
 
-    # Calculate priority package statistics
-    priority_uld_count = len(set([uld for package_id, uld, _, _ in allocations_result if package_id in priority_package_ids and uld is not None]))
-    cost_delay = K * priority_uld_count
-
-    # Create a summary DataFrame for priority package statistics
-    summary_data = [
-        ["Number of ULDs with priority packages", priority_uld_count],
-        ["Cost-Delay", cost_delay]
-    ]
-    summary_df = pd.DataFrame(summary_data, columns=["Metric", "Value"])
-
-    # Save the summary DataFrame to CSV
-    summary_df.to_csv("priority_package_summary.csv", index=False)
-
-    print(f"Results saved to 'allocations_result.csv'.")
-    print(f"Summary saved to 'priority_package_summary.csv'.")
-
-# Main function to run the program
+# Main function
 def main():
     uld_df, package_df, K = load_data()
-    
-    # If data is missing, return early
     if uld_df is None or package_df is None or K is None:
         print("Data loading failed. Exiting.")
         return
+
+    allocations_result, economy_delay, placed = fit_packages_to_uld(uld_df, package_df)
+    priority_package_ids = package_df[package_df['Type'] == "Priority"]["Package_ID"].tolist()
     
-    # Perform the allocation
-    allocations_result = fit_packages_to_uld(uld_df, package_df)
-    
-    # Get the list of priority package IDs
-    priority_package_ids = package_df[package_df['Type'] == "priority"]['Package_ID'].tolist()
-    
-    # Check for overlaps in the allocations
-    overlaps = check_for_overlaps(allocations_result)
-    if overlaps:
-        print(f"Overlaps found: {overlaps}")
-    else:
-        print("No overlaps detected.")
-    
-    # Save the results
-    save_results(allocations_result, K, priority_package_ids)
+    priority_uld_count = len(set([uld for package_id, uld, _, _ in allocations_result if package_id in priority_package_ids and uld is not None]))
+    cost1 = K * priority_uld_count
+    print(priority_uld_count)
+    print(cost1)
+    save_results(allocations_result, cost1, economy_delay, placed,priority_uld_count)
+
+    # save_results(allocations_result, cost1, total_cost_delay)
 
 if __name__ == "__main__":
     main()
