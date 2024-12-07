@@ -94,18 +94,21 @@ bool intelligentPackagePlacement(ULD& uld, Package& pkg) {
     struct Box {
         int x, y, z, length, width, height;
     };
+
     static vector<Box> placedBoxes;
-    // Helper to check overlap between two boxes
+    static vector<tuple<int, int, int>> availableSpaces = { {0, 0, 0} };
+
+    // Helper function to check overlap
     auto doesOverlap = [](const Box& b1, const Box& b2) {
-        return !(b1.x + b1.length <= b2.x ||
-                 b2.x + b2.length <= b1.x ||
-                 b1.y + b1.width <= b2.y ||
-                 b2.y + b2.width <= b1.y ||
-                 b1.z + b1.height <= b2.z ||
+        return !(b1.x + b1.length <= b2.x || 
+                 b2.x + b2.length <= b1.x || 
+                 b1.y + b1.width <= b2.y || 
+                 b2.y + b2.width <= b1.y || 
+                 b1.z + b1.height <= b2.z || 
                  b2.z + b2.height <= b1.z);
     };
-    // Maintain a list of available spaces
-    static vector<tuple<int, int, int>> availableSpaces = {{0, 0, 0}};
+
+    // Possible rotations of the package
     vector<tuple<int, int, int>> rotations = {
         {pkg.length, pkg.width, pkg.height},
         {pkg.width, pkg.height, pkg.length},
@@ -114,22 +117,24 @@ bool intelligentPackagePlacement(ULD& uld, Package& pkg) {
         {pkg.width, pkg.length, pkg.height},
         {pkg.height, pkg.width, pkg.length}
     };
-    for (const auto& rotation : rotations) {
+
+    for (auto& rotation : rotations) {
         int l = get<0>(rotation);
         int w = get<1>(rotation);
         int h = get<2>(rotation);
-        // Ensure package fits within ULD constraints
-        if (l > uld.length || w > uld.width || h > uld.height ||
-            uld.currentWeight + pkg.weight > uld.weightLimit ||
-            uld.currentVolume + (l * w * h) > (uld.length * uld.width * uld.height)) {
-            continue;
-        }
+
+        // Ensure package fits ULD constraints
+        if (l > uld.length || w > uld.width || h > uld.height) continue;
+        if (uld.currentWeight + pkg.weight > uld.weightLimit) continue;
+
         for (auto it = availableSpaces.begin(); it != availableSpaces.end(); ++it) {
             int x = get<0>(*it);
             int y = get<1>(*it);
             int z = get<2>(*it);
+
             Box newBox = {x, y, z, l, w, h};
-            // Check overlap with all placed packages
+
+            // Check for overlaps with all placed boxes
             bool overlap = false;
             for (const auto& placedBox : placedBoxes) {
                 if (doesOverlap(newBox, placedBox)) {
@@ -137,24 +142,36 @@ bool intelligentPackagePlacement(ULD& uld, Package& pkg) {
                     break;
                 }
             }
+
             if (!overlap) {
-                // Place the package and update ULD stats
+                // Package can fit here
                 placedBoxes.push_back(newBox);
                 uld.packedPackages.emplace_back(x, y, z, pkg);
+
+                // Update ULD statistics
                 uld.currentWeight += pkg.weight;
                 uld.currentVolume += l * w * h;
+
+                // Mark the package as placed
                 pkg.placement = {x, y, z};
-                // Update available spaces
+                pkg.packed = true;
+
+                // Update available spaces to exclude this placement
                 availableSpaces.erase(it);
                 availableSpaces.push_back({x + l, y, z});
                 availableSpaces.push_back({x, y + w, z});
                 availableSpaces.push_back({x, y, z + h});
+
+                // Return true if successfully placed
                 return true;
             }
         }
     }
+
+    // If no valid space was found
     return false;
 }
+
 class AdvancedPackingOptimizer {
 private:
     vector<Package> packages;
@@ -228,7 +245,7 @@ public:
             const Package& pkg = get<3>(entry);
             outputFile << pkg.identifier << "," << uld.identifier
                        << "," << x << "," << y << "," << z
-                       << "," << pkg.length << "," << pkg.width << "," << pkg.height << "\n";
+                       << "," << pkg.length+x << "," << pkg.width+y << "," << pkg.height+z << "\n";
             packedPackageIds.insert(pkg.identifier);
         }
     }
