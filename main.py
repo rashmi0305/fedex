@@ -135,8 +135,8 @@ def save_results(allocations_result, K, cost, placed,priority_allocated_count):
                 x_start, y_start, z_start = allocation[2]
                 x_end, y_end, z_end = allocation[3]
             else:
-                x_start, y_start, z_start = 0, 0, 0
-                x_end, y_end, z_end = 0, 0, 0
+                x_start, y_start, z_start = -1, -1, -1
+                x_end, y_end, z_end = -1, -1, -1
 
             # Write in the required format
             writer.writerow([package_id, uld_id, x_start, y_start, z_start, x_end, y_end, z_end])
