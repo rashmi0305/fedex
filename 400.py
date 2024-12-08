@@ -2,12 +2,14 @@ import pandas as pd
 # import math
 import concurrent.futures
 uld_data = [
-    ("U1", 224, 150, 162, 2500),
+    
+
+    ("U1", 224, 318, 162, 2500),
     ("U2", 224, 318, 162, 2500),
     ("U3", 244, 318, 244, 2800),
     ("U4", 244, 318, 244, 2800),
     ("U5", 244, 318, 285, 3500)
-    #  ("U6", 244, 31, 28, 3500)
+    ("U6", 244, 318, 285, 3500)
 ]
 K=40 # delay for spreading priority packages into multiple ULDS
 
@@ -459,7 +461,7 @@ def fit_packages_to_uld(uld_df, package_df):
         package_volume = package["Volume"]
         package_weight = package["Weight"]
         package_rotations = rotate_package(package)
-
+        
         allocated = False  # Track if package is allocated
         for uld in allocations.keys():  # Iterate through ULDs in order
             uld_remaining = remaining_space[uld]
@@ -494,6 +496,7 @@ def fit_packages_to_uld(uld_df, package_df):
                                         allocations[uld].append(package["Package_ID"])
                                         allocations_result.append((package["Package_ID"], uld, (x, y, z), 
                                                                    (x + p_length, y + p_width, z + p_height)))
+                                        print(package["Package_ID"])
                                         allocated = True
                                         break  # Stop once allocated
                             if allocated:
